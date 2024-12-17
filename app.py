@@ -10,17 +10,17 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = ["*"],
-    allow_methods = ["POST"],
-    allow_headers = ["*"],
+    allow_origins=["*"],
+    allow_methods=["POST"],
+    allow_headers=["*"],
 )
 
-class ColumnEnum(str, Enum):
-    Open = "Open"
-    High = "High"
-    Low = "Low"
-    Close = "Close"
-    Volume = "Volume"
+class ColumnEnum(Enum):
+    Open = 0
+    High = 1
+    Low = 2
+    Close = 3
+    Volume = 4
 
 class TimeFrame(BaseModel):
     start_date: str
@@ -41,8 +41,8 @@ class StockPrice:
         self.result_list = self._prepare_data()
 
     def _get_stock_price(self):
-        stocks = yf.download(self.symbol_list, start = self.start_date, end = self.end_date)
-        column_name = self.column.value
+        stocks = yf.download(self.symbol_list, start=self.start_date, end=self.end_date)
+        column_name = ColumnEnum(self.column).name
         df = stocks[column_name].iloc[::-1].replace(np.nan, None)  
         if isinstance(df, pd.Series): 
             df = df.to_frame(name=self.symbol_list[0])
@@ -63,14 +63,14 @@ class StockPrice:
             "result": self.result_list
         }
 
-@app.post("/stock", summary = "Retrieve stock price data", description = "Fetch stock prices for specific symbols and time range.")
+@app.post("/stock", summary="Retrieve stock price data", description="Fetch stock prices for specific symbols and time range.")
 async def stock(request_data: StockRequest):
     try:
         stock_price = StockPrice(request_data)
         return stock_price.get_result()
     except Exception as e:
-        raise HTTPException(status_code = 400, detail = str(e))
+        raise HTTPException(status_code=400, detail={"status": 0, "error_msg": str(e)})
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host = "0.0.0.0", port = 2949, reload = True)
+    uvicorn.run(app, host="0.0.0.0", port=2949, reload=True)
